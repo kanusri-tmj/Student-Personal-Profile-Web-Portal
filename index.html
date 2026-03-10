@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Student Personal Profile Web Portal – KLH</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --navy: #0a1628;
+    --navy2: #0d1f3c;
+    --navy3: #122350;
+    --blue-mid: #1a3a6e;
+    --accent: #2e6ff7;
+    --accent2: #4fc3f7;
+    --white: #ffffff;
+    --offwhite: #e8edf7;
+    --card: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.12);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; background: var(--navy); color: var(--white); min-height: 100vh; overflow-x: hidden; }
+
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  .star-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse at 20% 30%, #1a3a6e44 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 70%, #2e6ff722 0%, transparent 60%),
+                var(--navy);
+  }
+  .star-bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, #fff 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.06;
+    animation: twinkle 8s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle { from { opacity: 0.04; } to { opacity: 0.10; } }
+
+  #loginScreen {
+    align-items: center; justify-content: center;
+    padding: 20px; position: relative;
+  }
+  .login-container {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 32px;
+    width: 100%; max-width: 900px;
+  }
+  .portal-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.2rem, 3.5vw, 2.2rem);
+    font-weight: 900;
+    color: var(--white);
+    text-align: center;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 0 0 30px rgba(46,111,247,0.8), 0 2px 20px rgba(0,0,0,0.5);
+    line-height: 1.3;
+  }
+  .portal-title span { color: var(--accent2); }
+  .subtitle { color: var(--offwhite); opacity: 0.7; font-size: 0.95rem; letter-spacing: 1px; }
+
+  .figures-row { display: flex; align-items: flex-end; justify-content: center; gap: 60px; }
+  .figure-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .figure-label { font-size: 0.85rem; color: var(--accent2); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .figure { width: 90px; animation: float 3s ease-in-out infinite; }
+  .figure.teacher { animation-delay: 0.5s; }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+  .teacher-svg, .student-svg { filter: drop-shadow(0 8px 24px rgba(46,111,247,0.4)); }
+
+  .login-cards { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; }
+  .login-card {
+    background: rgba(255,255,255,0.06);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 32px 36px;
+    width: 280px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    backdrop-filter: blur(12px);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative; overflow: hidden;
+  }
+  .login-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(46,111,247,0.15), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .login-card:hover { transform: translateY(-6px); border-color: var(--accent); box-shadow: 0 16px 40px rgba(46,111,247,0.3); }
+  .login-card:hover::before { opacity: 1; }
+  .login-card .card-icon { font-size: 2.8rem; }
+  .login-card .card-title { font-family: 'Orbitron', monospace; font-size: 1rem; font-weight: 700; color: var(--white); text-align: center; }
+  .login-card .card-desc { font-size: 0.8rem; color: rgba(255,255,255,0.55); text-align: center; }
+  .btn-enter {
+    background: linear-gradient(135deg, var(--accent), #1a56d6);
+    border: none; color: white; padding: 10px 28px; border-radius: 50px;
+    font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.9rem;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
+  }
+  .btn-enter:hover { transform: scale(1.05); box-shadow: 0 4px 20px rgba(46,111,247,0.5); }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: none; align-items: center; justify-content: center; z-index: 1000;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: linear-gradient(145deg, #0d1f3c, #122350);
+    border: 1.5px solid rgba(255,255,255,0.18);
+    border-radius: 24px; padding: 40px 36px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-title { font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight: 700; margin-bottom: 24px; color: var(--accent2); }
+  .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+  .form-group label { font-size: 0.82rem; color: rgba(255,255,255,0.65); font-weight: 600; letter-spacing: 0.5px; }
+  .form-group input {
+    background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15);
+    color: white; padding: 12px 16px; border-radius: 10px;
+    font-family: 'Nunito', sans-serif; font-size: 0.95rem;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus { outline: none; border-color: var(--accent); }
+  .error-msg { color: #ff6b6b; font-size: 0.82rem; margin-top: -10px; margin-bottom: 8px; display: none; }
+  .modal-actions { display: flex; gap: 12px; margin-top: 8px; }
+  .btn-login {
+    flex: 1; background: linear-gradient(135deg, var(--accent), #1a56d6);
+    border: none; color: white; padding: 13px; border-radius: 10px;
+    font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-login:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-cancel {
+    flex: 1; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15);
+    color: white; padding: 13px; border-radius: 10px;
+    font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-cancel:hover { background: rgba(255,255,255,0.13); }
+
+  #studentDash { position: relative; }
+  .dash-header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,22,40,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .dash-logo { font-family: 'Orbitron', monospace; font-size: 1rem; font-weight: 700; color: var(--accent2); letter-spacing: 1px; }
+  .dash-user { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.8); }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; }
+  .btn-logout { background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); padding: 6px 14px; border-radius: 20px; font-family: 'Nunito', sans-serif; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; margin-left: 8px; }
+  .btn-logout:hover { border-color: #ff6b6b; color: #ff6b6b; }
+
+  .dash-body { display: flex; flex: 1; min-height: calc(100vh - 64px); }
+
+  .sidebar {
+    width: 220px; min-width: 220px;
+    background: rgba(13,31,60,0.7); border-right: 1px solid var(--border);
+    padding: 20px 12px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .sidebar-label { font-size: 0.7rem; color: rgba(255,255,255,0.35); letter-spacing: 1.5px; text-transform: uppercase; padding: 8px 10px 4px; font-weight: 700; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 10px;
+    font-size: 0.88rem; font-weight: 600; color: rgba(255,255,255,0.65);
+    cursor: pointer; transition: all 0.2s; border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.07); color: white; }
+  .nav-item.active { background: linear-gradient(135deg, rgba(46,111,247,0.3), rgba(46,111,247,0.1)); color: white; border: 1px solid rgba(46,111,247,0.4); }
+  .nav-icon { font-size: 1.1rem; }
+
+  .main-content { flex: 1; padding: 28px 32px; overflow-y: auto; }
+  .section-panel { display: none; }
+  .section-panel.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .section-title {
+    font-family: 'Orbitron', monospace; font-size: 1.15rem; font-weight: 700;
+    color: var(--white); margin-bottom: 24px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .icon { color: var(--accent2); }
+
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  .info-card {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px;
+    transition: all 0.2s;
+  }
+  .info-card:hover { border-color: rgba(46,111,247,0.4); background: rgba(46,111,247,0.06); }
+  .info-card .label { font-size: 0.72rem; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; font-weight: 700; }
+  .info-card .value { font-size: 0.95rem; color: var(--white); font-weight: 700; }
+
+  .profile-hero {
+    background: linear-gradient(135deg, rgba(46,111,247,0.2), rgba(79,195,247,0.1));
+    border: 1px solid rgba(46,111,247,0.3);
+    border-radius: 18px; padding: 24px 28px;
+    display: flex; align-items: center; gap: 24px; margin-bottom: 24px;
+  }
+  .profile-avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; font-weight: 900; flex-shrink: 0;
+    border: 3px solid rgba(255,255,255,0.3);
+  }
+  .profile-info h2 { font-family: 'Orbitron', monospace; font-size: 1.1rem; font-weight: 700; }
+  .profile-info p { color: rgba(255,255,255,0.6); font-size: 0.85rem; margin-top: 4px; }
+  .badge {
+    display: inline-block; background: rgba(46,111,247,0.25); border: 1px solid rgba(46,111,247,0.5);
+    color: var(--accent2); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; margin-top: 8px; margin-right: 6px;
+  }
+
+  .timetable-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: rgba(46,111,247,0.25); color: var(--accent2);
+    padding: 12px 16px; text-align: left; font-family: 'Orbitron', monospace;
+    font-size: 0.78rem; letter-spacing: 0.8px; border-bottom: 2px solid rgba(46,111,247,0.4);
+  }
+  td {
+    padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-size: 0.88rem; color: rgba(255,255,255,0.85);
+  }
+  tr:hover td { background: rgba(46,111,247,0.08); }
+  .subject-pill {
+    display: inline-block; padding: 4px 12px; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 700; margin: 2px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  }
+  .day-cell { font-weight: 700; color: var(--accent2); font-size: 0.88rem; }
+
+  .att-card {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+    border-radius: 18px; padding: 28px; max-width: 520px;
+  }
+  .att-row { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .att-row label { font-size: 0.85rem; color: rgba(255,255,255,0.65); font-weight: 600; min-width: 140px; }
+  .att-input {
+    background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15);
+    color: white; padding: 10px 14px; border-radius: 10px;
+    font-family: 'Nunito', sans-serif; font-size: 0.95rem; width: 120px;
+    transition: border-color 0.2s;
+  }
+  .att-input:focus { outline: none; border-color: var(--accent); }
+  .att-result {
+    background: linear-gradient(135deg, rgba(46,111,247,0.2), rgba(79,195,247,0.1));
+    border: 1px solid rgba(46,111,247,0.4);
+    border-radius: 14px; padding: 18px 22px; margin-top: 20px;
+    font-size: 1.05rem; font-weight: 700; display: none;
+  }
+  .att-pct { font-family: 'Orbitron', monospace; font-size: 2rem; font-weight: 900; }
+  .att-pct.good { color: #4caf50; }
+  .att-pct.warn { color: #ff9800; }
+  .att-pct.bad { color: #f44336; }
+  .btn-calc {
+    background: linear-gradient(135deg, var(--accent), #1a56d6);
+    border: none; color: white; padding: 12px 28px; border-radius: 10px;
+    font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.2s; margin-top: 8px;
+  }
+  .btn-calc:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46,111,247,0.4); }
+
+  #adminDash { position: relative; }
+  .admin-content { flex: 1; padding: 32px; max-width: 900px; margin: 0 auto; width: 100%; }
+  .search-bar-wrap { display: flex; gap: 12px; margin-bottom: 32px; }
+  .search-input {
+    flex: 1; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15);
+    color: white; padding: 14px 20px; border-radius: 12px;
+    font-family: 'Nunito', sans-serif; font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { outline: none; border-color: var(--accent); }
+  .search-input::placeholder { color: rgba(255,255,255,0.35); }
+  .btn-search {
+    background: linear-gradient(135deg, var(--accent), #1a56d6);
+    border: none; color: white; padding: 14px 28px; border-radius: 12px;
+    font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-search:hover { opacity: 0.9; transform: translateY(-1px); }
+  .admin-result { animation: fadeIn 0.3s ease; }
+  .admin-section { margin-bottom: 28px; }
+  .admin-section-title {
+    font-family: 'Orbitron', monospace; font-size: 0.85rem; font-weight: 700;
+    color: var(--accent2); letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    background: #f44336; color: white; padding: 12px 24px; border-radius: 30px;
+    font-weight: 700; font-size: 0.88rem; z-index: 9999;
+    animation: fadeIn 0.3s ease; display: none;
+  }
+  .toast.show { display: block; }
+  .no-result { color: rgba(255,255,255,0.45); padding: 24px; text-align: center; font-size: 0.95rem; }
+
+  @media (max-width: 600px) {
+    .dash-body { flex-direction: column; }
+    .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; padding: 10px; }
+    .nav-item { padding: 8px 10px; font-size: 0.78rem; }
+    .main-content { padding: 16px; }
+    .profile-hero { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="star-bg"></div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="screen active">
+  <div class="login-container">
+    <div>
+      <div class="portal-title">Student Personal Profile<br/><span>Web Portal</span></div>
+      <div class="subtitle" style="margin-top:8px;text-align:center;">KLH Campus – Bachupally</div>
+    </div>
+
+    <div class="figures-row">
+      <div class="figure-wrap">
+        <svg class="figure teacher teacher-svg" viewBox="0 0 90 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="45" cy="22" r="16" fill="#4fc3f7" opacity="0.9"/>
+          <rect x="28" y="42" width="34" height="48" rx="10" fill="#1a56d6"/>
+          <polygon points="45,44 42,56 45,62 48,56" fill="#4fc3f7" opacity="0.8"/>
+          <rect x="14" y="46" width="14" height="8" rx="4" fill="#1a56d6" transform="rotate(-20,21,50)"/>
+          <rect x="62" y="46" width="14" height="8" rx="4" fill="#1a56d6" transform="rotate(20,69,50)"/>
+          <line x1="72" y1="44" x2="82" y2="30" stroke="#4fc3f7" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="82" cy="28" r="3" fill="#4fc3f7"/>
+          <rect x="31" y="88" width="12" height="30" rx="5" fill="#0d1f3c"/>
+          <rect x="47" y="88" width="12" height="30" rx="5" fill="#0d1f3c"/>
+          <ellipse cx="37" cy="120" rx="9" ry="5" fill="#2e6ff7"/>
+          <ellipse cx="53" cy="120" rx="9" ry="5" fill="#2e6ff7"/>
+          <circle cx="39" cy="20" r="2.5" fill="#0a1628"/>
+          <circle cx="51" cy="20" r="2.5" fill="#0a1628"/>
+          <path d="M40 27 Q45 31 50 27" stroke="#0a1628" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="figure-label">Admin / Teacher</div>
+      </div>
+
+      <div class="figure-wrap">
+        <svg class="figure student student-svg" viewBox="0 0 90 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="45" cy="22" r="16" fill="#ffcc80" opacity="0.95"/>
+          <rect x="28" y="42" width="34" height="48" rx="10" fill="#2e6ff7"/>
+          <path d="M38 42 L45 52 L52 42" fill="#e3f2fd" opacity="0.9"/>
+          <rect x="60" y="48" width="8" height="30" rx="4" fill="#1a3a6e"/>
+          <rect x="14" y="46" width="14" height="8" rx="4" fill="#2e6ff7" transform="rotate(10,21,50)"/>
+          <rect x="62" y="46" width="14" height="8" rx="4" fill="#2e6ff7" transform="rotate(-10,69,50)"/>
+          <rect x="6" y="52" width="16" height="20" rx="3" fill="#4fc3f7"/>
+          <line x1="14" y1="54" x2="14" y2="70" stroke="#0a1628" stroke-width="1.5" opacity="0.5"/>
+          <rect x="31" y="88" width="12" height="30" rx="5" fill="#1a3a6e"/>
+          <rect x="47" y="88" width="12" height="30" rx="5" fill="#1a3a6e"/>
+          <ellipse cx="37" cy="120" rx="9" ry="5" fill="#0a1628"/>
+          <ellipse cx="53" cy="120" rx="9" ry="5" fill="#0a1628"/>
+          <circle cx="39" cy="20" r="2.5" fill="#5d3a1a"/>
+          <circle cx="51" cy="20" r="2.5" fill="#5d3a1a"/>
+          <path d="M40 28 Q45 32 50 28" stroke="#5d3a1a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <ellipse cx="45" cy="7" rx="18" ry="4" fill="#0d1f3c"/>
+          <rect x="35" y="4" width="20" height="5" rx="3" fill="#0d1f3c"/>
+          <rect x="59" y="5" width="8" height="3" rx="1.5" fill="#4fc3f7"/>
+        </svg>
+        <div class="figure-label">Student</div>
+      </div>
+    </div>
+
+    <div class="login-cards">
+      <div class="login-card" onclick="openModal('admin')">
+        <div class="card-icon">🏫</div>
+        <div class="card-title">Admin Login</div>
+        <div class="card-desc">Faculty & Administrative access to student records</div>
+        <button class="btn-enter">Enter Portal →</button>
+      </div>
+      <div class="login-card" onclick="openModal('student')">
+        <div class="card-icon">🎓</div>
+        <div class="card-title">Student Login</div>
+        <div class="card-desc">Access your personal academic profile & records</div>
+        <button class="btn-enter">Enter Portal →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">🔐 Student Login</div>
+    <div class="form-group">
+      <label>Student / Admin ID</label>
+      <input type="text" id="loginId" placeholder="Enter your ID"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Enter password"/>
+    </div>
+    <div class="error-msg" id="loginError">❌ Invalid ID or Password. Please try again.</div>
+    <div class="modal-actions">
+      <button class="btn-login" onclick="doLogin()">Login</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT DASHBOARD -->
+<div id="studentDash" class="screen">
+  <div class="dash-header">
+    <div class="dash-logo">🎓 KLH Portal</div>
+    <div class="dash-user">
+      <div class="avatar" id="studentAvatar">A</div>
+      <span id="studentNameHeader">Student</span>
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </div>
+  <div class="dash-body">
+    <div class="sidebar">
+      <div class="sidebar-label">My Profile</div>
+      <button class="nav-item active" onclick="showSection('personal')" id="nav-personal">
+        <span class="nav-icon">👤</span> Personal Info
+      </button>
+      <button class="nav-item" onclick="showSection('timetable')" id="nav-timetable">
+        <span class="nav-icon">📅</span> Timetable
+      </button>
+      <button class="nav-item" onclick="showSection('qualification')" id="nav-qualification">
+        <span class="nav-icon">🎓</span> Qualification
+      </button>
+      <button class="nav-item" onclick="showSection('dependent')" id="nav-dependent">
+        <span class="nav-icon">👨‍👩‍👧</span> Dependent Details
+      </button>
+      <button class="nav-item" onclick="showSection('address')" id="nav-address">
+        <span class="nav-icon">🏠</span> Address Details
+      </button>
+      <button class="nav-item" onclick="showSection('attendance')" id="nav-attendance">
+        <span class="nav-icon">📊</span> Attendance Calc
+      </button>
+    </div>
+    <div class="main-content">
+
+      <!-- PERSONAL INFO -->
+      <div class="section-panel active" id="panel-personal">
+        <div class="section-title"><span class="icon">👤</span> Personal Information</div>
+        <div class="profile-hero">
+          <div class="profile-avatar" id="profileInitials">A</div>
+          <div class="profile-info">
+            <h2 id="heroName">Student Name</h2>
+            <p id="heroId">ID: --------</p>
+            <div>
+              <span class="badge" id="heroCourse">B.Tech</span>
+              <span class="badge" id="heroBranch">CSE</span>
+              <span class="badge" id="heroYear">1st Year</span>
+            </div>
+          </div>
+        </div>
+        <div class="info-grid" id="personalGrid"></div>
+      </div>
+
+      <!-- TIMETABLE -->
+      <div class="section-panel" id="panel-timetable">
+        <div class="section-title"><span class="icon">📅</span> Weekly Timetable</div>
+        <div class="timetable-wrap">
+          <table id="timetableTable">
+            <thead>
+              <tr>
+                <th>Day</th><th>Period 1</th><th>Period 2</th>
+                <th>Period 3</th><th>Period 4</th><th>Period 5</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- QUALIFICATION -->
+      <div class="section-panel" id="panel-qualification">
+        <div class="section-title"><span class="icon">🎓</span> Qualification Details</div>
+        <div class="info-grid" id="qualGrid"></div>
+      </div>
+
+      <!-- DEPENDENT -->
+      <div class="section-panel" id="panel-dependent">
+        <div class="section-title"><span class="icon">👨‍👩‍👧</span> Dependent Details</div>
+        <div class="info-grid" id="depGrid"></div>
+      </div>
+
+      <!-- ADDRESS -->
+      <div class="section-panel" id="panel-address">
+        <div class="section-title"><span class="icon">🏠</span> Address Details</div>
+        <div class="info-grid" id="addrGrid"></div>
+      </div>
+
+      <!-- ATTENDANCE -->
+      <div class="section-panel" id="panel-attendance">
+        <div class="section-title"><span class="icon">📊</span> Attendance Calculator</div>
+        <div class="att-card">
+          <div class="att-row">
+            <label>Total Classes Held</label>
+            <input class="att-input" type="number" id="totalClasses" placeholder="e.g. 120" min="0"/>
+          </div>
+          <div class="att-row">
+            <label>Classes Attended</label>
+            <input class="att-input" type="number" id="attendedClasses" placeholder="e.g. 95" min="0"/>
+          </div>
+          <button class="btn-calc" onclick="calcAttendance()">Calculate Attendance</button>
+          <div class="att-result" id="attResult">
+            <div style="margin-bottom:8px;font-size:0.85rem;color:rgba(255,255,255,0.65);">Your Attendance</div>
+            <div class="att-pct" id="attPct">0%</div>
+            <div id="attStatus" style="margin-top:8px;font-size:0.9rem;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div id="adminDash" class="screen">
+  <div class="dash-header">
+    <div class="dash-logo">🏫 KLH Admin Portal</div>
+    <div class="dash-user">
+      <div class="avatar">A</div>
+      <span>Administrator</span>
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </div>
+  <div class="dash-body" style="justify-content:center;">
+    <div class="admin-content">
+      <div class="section-title" style="margin-bottom:24px;"><span class="icon">🔍</span> Search Student Records</div>
+      <div class="search-bar-wrap">
+        <input class="search-input" type="text" id="adminSearch"
+          placeholder="Enter Student Roll Number (e.g. 2520030432)"
+          onkeydown="if(event.key==='Enter')adminLookup()"/>
+        <button class="btn-search" onclick="adminLookup()">Search</button>
+      </div>
+      <div id="adminResult"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== DATA =====================
+const students = {
+  "2520030432": {
+    password: "anusri@klh",
+    basic: {
+      "Student ID": "2520030432",
+      "Roll Number": "2520030432",
+      "Name": "K ANUSRI",
+      "Gender": "Female",
+      "Course": "B.Tech",
+      "Branch": "CSE",
+      "Year": "1st Year",
+      "College": "KLH Campus – Bachupally",
+      "Admission Type": "Regular",
+      "Hostel Status": "Day Scholar"
+    },
+    personal: {
+      "Father Name": "KOTA RAJESH",
+      "Mother Name": "KANTHARANI KOTA",
+      "Mother Maiden Name": "KARRI KANTHARANI",
+      "Marital Status": "Single",
+      "Mother Tongue": "Telugu",
+      "Caste Category": "OC",
+      "Identification Mark": "Mole on right wrist",
+      "Disability": "NA",
+      "Place of Birth": "Pithapuram",
+      "Religion": "Hindu",
+      "Nationality": "Indian",
+      "Phone": "9876543210",
+      "Email": "kanusri@klh"
+    },
+    address: {
+      "House No": "1999",
+      "Area": "BHEL Cyber Colony",
+      "City": "Hyderabad",
+      "District": "Ranga Reddy",
+      "State": "Telangana",
+      "Pincode": "502300"
+    },
+    qualification: {
+      "10th School": "Bharatiya Vidya Bhavan's Public School",
+      "10th Board": "CBSE",
+      "10th Percentage": "80%",
+      "10th Year": "2023",
+      "12th College": "Sri Chaitanya Jr Kalasala",
+      "12th Board": "SSC",
+      "12th Percentage": "90%",
+      "12th Year": "2025"
+    },
+    dependent: {
+      "Father Name": "Kota Rajesh",
+      "Father Occupation": "Employee",
+      "Father Phone": "8765432109",
+      "Mother Name": "Kantharani Kota",
+      "Mother Occupation": "Employee",
+      "Mother Phone": "7654321098"
+    },
+    timetable: [
+      { day: "Monday",    subjects: ["DSA","FWD","MAI","JAVA","LIB"] },
+      { day: "Tuesday",   subjects: ["OS","DBMS","DTI","OOPS","FWD"] },
+      { day: "Wednesday", subjects: ["MAI","DSA","JAVA","FWD","DRI"] },
+      { day: "Thursday",  subjects: ["DTI","OS","OOPS","DBMS","BEEC"] },
+      { day: "Friday",    subjects: ["DDCA","BEEC","DMS","JAVA","LIB"] },
+      { day: "Saturday",  subjects: ["DTI","SPORTS","DDCA","BEEC","FWD"] }
+    ]
+  },
+  "2520040088": {
+    password: "advaith@klh",
+    basic: {
+      "Student ID": "2520040088",
+      "Roll Number": "2520040088",
+      "Name": "ADVAITH KOTHAPETA",
+      "Gender": "Male",
+      "Course": "B.Tech",
+      "Branch": "CSE",
+      "Year": "1st Year",
+      "College": "KLH Campus – Bachupally",
+      "Admission Type": "Regular",
+      "Hostel Status": "Day Scholar"
+    },
+    personal: {
+      "Father Name": "Venu Madhava Rao Kothapeta",
+      "Mother Name": "Kamala Poornima",
+      "Mother Maiden Name": "Avunoori",
+      "Marital Status": "Single",
+      "Mother Tongue": "Telugu",
+      "Caste Category": "OC",
+      "Identification Mark": "Mole on the forehead",
+      "Disability": "NA",
+      "Place of Birth": "Hyderabad",
+      "Religion": "Hindu",
+      "Nationality": "Indian",
+      "Phone": "7876543210",
+      "Email": "advaithkothapeta@klh"
+    },
+    address: {
+      "House No": "81",
+      "Area": "Doctor's Colony South",
+      "City": "Hyderabad",
+      "District": "Ranga Reddy",
+      "State": "Telangana",
+      "Pincode": "500035"
+    },
+    qualification: {
+      "10th School": "Sri Chaitanya Techno School",
+      "10th Board": "SSC",
+      "10th Percentage": "9.8 CGPA",
+      "10th Year": "2023",
+      "12th College": "Narayana Junior College",
+      "12th Board": "SSC",
+      "12th Percentage": "92%",
+      "12th Year": "2025"
+    },
+    dependent: {
+      "Father Name": "Venu Madhava Rao Kothapeta",
+      "Father Occupation": "Employee",
+      "Father Phone": "7965432109",
+      "Mother Name": "Kamala Poornima",
+      "Mother Occupation": "Employee",
+      "Mother Phone": "9654321098"
+    },
+    timetable: [
+     { day: "Monday",    subjects: ["DSA","FWD","MAI","JAVA","LIB"] },
+      { day: "Tuesday",   subjects: ["OS","DBMS","DTI","OOPS","FWD"] },
+      { day: "Wednesday", subjects: ["MAI","DSA","JAVA","FWD","DRI"] },
+      { day: "Thursday",  subjects: ["DTI","OS","OOPS","DBMS","BEEC"] },
+      { day: "Friday",    subjects: ["DDCA","BEEC","DMS","JAVA","LIB"] },
+      { day: "Saturday",  subjects: ["DTI","SPORTS","DDCA","BEEC","FWD"] }
+    ]
+  }
+};
+
+const adminCreds = { id: "admin@1981", password: "klh@1981" };
+let loginType = 'student';
+let currentStudent = null;
+
+// ===================== MODAL =====================
+function openModal(type) {
+  loginType = type;
+  document.getElementById('modalTitle').textContent =
+    type === 'admin' ? '🏫 Admin Login' : '🎓 Student Login';
+  document.getElementById('loginId').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('loginId').placeholder =
+    type === 'admin' ? 'e.g. admin@1981' : 'e.g. 2520030432';
+  document.getElementById('authModal').classList.add('open');
+  setTimeout(() => document.getElementById('loginId').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('authModal').classList.remove('open');
+}
+
+function doLogin() {
+  const id   = document.getElementById('loginId').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  document.getElementById('loginError').style.display = 'none';
+
+  if (loginType === 'admin') {
+    if (id === adminCreds.id && pass === adminCreds.password) {
+      closeModal();
+      showScreen('adminDash');
+    } else {
+      document.getElementById('loginError').style.display = 'block';
+    }
+  } else {
+    const s = students[id];
+    if (s && s.password === pass) {
+      currentStudent = { id, ...s };
+      loadStudentDash(id);
+      closeModal();
+      showScreen('studentDash');
+    } else {
+      document.getElementById('loginError').style.display = 'block';
+    }
+  }
+}
+
+// ===================== SCREEN & SECTION NAV =====================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function logout() {
+  currentStudent = null;
+  showScreen('loginScreen');
+  document.getElementById('adminResult').innerHTML = '';
+  document.getElementById('adminSearch').value = '';
+}
+
+function showSection(name) {
+  document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+}
+
+// ===================== STUDENT DASHBOARD LOADER =====================
+function loadStudentDash(id) {
+  const s = students[id];
+  const name = s.basic['Name'];
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2);
+
+  document.getElementById('studentAvatar').textContent   = initials;
+  document.getElementById('studentNameHeader').textContent = name;
+  document.getElementById('profileInitials').textContent  = initials;
+  document.getElementById('heroName').textContent  = name;
+  document.getElementById('heroId').textContent    = 'ID: ' + id;
+  document.getElementById('heroCourse').textContent = s.basic['Course'];
+  document.getElementById('heroBranch').textContent  = s.basic['Branch'];
+  document.getElementById('heroYear').textContent   = s.basic['Year'];
+
+  // Personal grid (basic + personal combined)
+  const allPersonal = { ...s.basic, ...s.personal };
+  document.getElementById('personalGrid').innerHTML = makeGrid(allPersonal);
+
+  // Timetable
+  const tbody = document.querySelector('#timetableTable tbody');
+  tbody.innerHTML = s.timetable.map(row =>
+    `<tr>
+      <td class="day-cell">${row.day}</td>
+      ${row.subjects.map(sub => `<td><span class="subject-pill">${sub}</span></td>`).join('')}
+    </tr>`
+  ).join('');
+
+  // Other sections
+  document.getElementById('qualGrid').innerHTML  = makeGrid(s.qualification);
+  document.getElementById('depGrid').innerHTML   = makeGrid(s.dependent);
+  document.getElementById('addrGrid').innerHTML  = makeGrid(s.address);
+
+  // Reset attendance
+  document.getElementById('totalClasses').value    = '';
+  document.getElementById('attendedClasses').value = '';
+  document.getElementById('attResult').style.display = 'none';
+
+  showSection('personal');
+}
+
+function makeGrid(obj) {
+  return Object.entries(obj).map(([k, v]) =>
+    `<div class="info-card">
+       <div class="label">${k}</div>
+       <div class="value">${v}</div>
+     </div>`
+  ).join('');
+}
+
+// ===================== ATTENDANCE CALCULATOR =====================
+function calcAttendance() {
+  const total    = parseInt(document.getElementById('totalClasses').value);
+  const attended = parseInt(document.getElementById('attendedClasses').value);
+
+  if (isNaN(total) || isNaN(attended) || total <= 0) {
+    showToast('Please enter valid numbers.');
+    return;
+  }
+  if (attended > total) {
+    showToast('Attended cannot exceed total classes.');
+    return;
+  }
+
+  const pct = ((attended / total) * 100).toFixed(2);
+  const el  = document.getElementById('attPct');
+  el.textContent = pct + '%';
+  el.className   = 'att-pct ' + (pct >= 75 ? 'good' : pct >= 60 ? 'warn' : 'bad');
+
+  let status = '';
+  if      (pct >= 75) status = '✅ Good standing! You meet the 75% attendance requirement.';
+  else if (pct >= 60) status = '⚠️ Below 75%. You need to attend more classes to meet the requirement.';
+  else                status = '❌ Critical! Attendance is very low. Please consult your advisor.';
+
+  document.getElementById('attStatus').textContent    = status;
+  document.getElementById('attResult').style.display  = 'block';
+}
+
+// ===================== ADMIN SEARCH =====================
+function adminLookup() {
+  const query     = document.getElementById('adminSearch').value.trim();
+  const resultDiv = document.getElementById('adminResult');
+  const s         = students[query];
+
+  if (!s) {
+    resultDiv.innerHTML = `<div class="no-result">
+      No student found with Roll Number <strong>${query || '—'}</strong>.
+      Try: 2520030432 or 2520040088
+    </div>`;
+    return;
+  }
+
+  const name     = s.basic['Name'];
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2);
+
+  resultDiv.innerHTML = `
+    <div class="admin-result">
+      <div class="profile-hero" style="margin-bottom:24px;">
+        <div class="profile-avatar">${initials}</div>
+        <div class="profile-info">
+          <h2>${name}</h2>
+          <p>Roll No: ${query}</p>
+          <div>
+            <span class="badge">${s.basic['Course']}</span>
+            <span class="badge">${s.basic['Branch']}</span>
+            <span class="badge">${s.basic['Year']}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <div class="admin-section-title">📋 Basic Details</div>
+        <div class="info-grid">${makeGrid(s.basic)}</div>
+      </div>
+      <div class="admin-section">
+        <div class="admin-section-title">👤 Personal Information</div>
+        <div class="info-grid">${makeGrid(s.personal)}</div>
+      </div>
+      <div class="admin-section">
+        <div class="admin-section-title">🏠 Address Details</div>
+        <div class="info-grid">${makeGrid(s.address)}</div>
+      </div>
+      <div class="admin-section">
+        <div class="admin-section-title">🎓 Qualification</div>
+        <div class="info-grid">${makeGrid(s.qualification)}</div>
+      </div>
+      <div class="admin-section">
+        <div class="admin-section-title">👨‍👩‍👧 Dependent Details</div>
+        <div class="info-grid">${makeGrid(s.dependent)}</div>
+      </div>
+      <div class="admin-section">
+        <div class="admin-section-title">📅 Timetable</div>
+        <div class="timetable-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Day</th><th>Period 1</th><th>Period 2</th>
+                <th>Period 3</th><th>Period 4</th><th>Period 5</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${s.timetable.map(row =>
+                `<tr>
+                  <td class="day-cell">${row.day}</td>
+                  ${row.subjects.map(sub =>
+                    `<td><span class="subject-pill">${sub}</span></td>`
+                  ).join('')}
+                </tr>`
+              ).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ===================== TOAST =====================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Close modal when clicking outside
+document.getElementById('authModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
